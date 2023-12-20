@@ -1,0 +1,7 @@
+1 REM This is a comment
+2 LET A = 2
+3 PRINT A
+4 LET B = 2
+5 LET C = (A+B) ** 3 
+6 PRINT C
+7 END

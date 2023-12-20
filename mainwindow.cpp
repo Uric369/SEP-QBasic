@@ -21,6 +21,10 @@ MainWindow::~MainWindow()
 
 void MainWindow::Run(){
     std::cout << "Run" << std::endl;
+    program.exec();
+    std::cout << program.getOutput() << std::endl;
+    ui->textBrowser->setPlainText(QString::fromStdString(program.getOutput()));
+    ui->treeDisplay->setPlainText(QString::fromStdString(program.getSyntaxTree()));
 }
 
 void MainWindow::Clear(){
@@ -40,9 +44,39 @@ void MainWindow::on_cmdLineEdit_editingFinished(){
 
 void MainWindow::Load()
 {
+    program.reset();
     std::cout << "Load" << std::endl;
-    // 打开文件选择对话框并获取选定的文件路径
+    // Open file selection dialog and get the selected file path
     QString filePath = QFileDialog::getOpenFileName(this, tr("Open Code File"), "", tr("Code Files (*.txt *.h *.cpp);;All Files (*)"));
 
-    program.Load(filePath.toStdString());
+    // Check if a file was selected (filePath is not empty)
+    if (!filePath.isEmpty())
+    {
+        // Convert the QString filePath to std::string
+        std::string path = filePath.toStdString();
+
+        // Create an input file stream
+        std::ifstream file(path);
+
+        // Check if the file is successfully opened
+        if (file)
+        {
+            // Read the file content and pass it to program
+            std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+            program.LoadContent(content); // Assuming program.Load() can take file content as a string
+
+            // Set the content in the UI's CodeDisplay
+            ui->CodeDisplay->setPlainText(QString::fromStdString(content));
+        }
+        else{
+            QMessageBox::warning(this, tr("Error"), tr("Could not open the file."));
+        }
+    }
+    else{
+        QMessageBox::information(this, tr("Information"), tr("No file was selected."));
+    }
 }
+
+
+

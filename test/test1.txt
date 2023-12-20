@@ -1,0 +1,4 @@
+1 REM This is a comment
+2 LET A = 10
+3 PRINT A
+4 END

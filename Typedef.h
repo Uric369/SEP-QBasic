@@ -25,5 +25,7 @@ enum Operator {
     Less        // <
 };
 
+extern const std::string retract;
+
 
 #endif // TYPEDEF_H

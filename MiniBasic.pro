@@ -13,6 +13,7 @@ SOURCES += \
     ExpressionEvaluator.cpp \
     Program.cpp \
     Statement.cpp \
+    Typedef.cpp \
     main.cpp \
     mainwindow.cpp
 

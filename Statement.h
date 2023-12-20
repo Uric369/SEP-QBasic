@@ -18,15 +18,16 @@ class Statement{
 //    friend class Program;
 
 protected:
-    statementType type;
     std::string statement;
     int lineNumber;
 public:
+    statementType type;
     Statement();
     virtual ~Statement()=0;
     virtual void parse(Program &program)=0;
     virtual void exec(Program &program)=0;
     virtual std::string syntaxTree() const;
+    statementType getType() const;
 };
 
 

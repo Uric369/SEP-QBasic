@@ -2,6 +2,7 @@
 #ifndef EXCEPTION_H
 #define EXCEPTION_H
 #include <exception>
+#include <iostream>
 #include <string>
 #include <sstream>
 
@@ -11,7 +12,7 @@ enum class ParseErrorType {
     TokenError, //词法错误，例如无法识别的符号或关键字。
     TypeError, //类型错误，当变量的类型不符合操作要求时抛出。
     UndefinedVariableError, //使用未定义的变量时抛出。
-    UndefinedLabelError, //GOTO 语句跳转到未定义的标签时抛出。
+    UndefinedLineError, //GOTO 语句跳转到未定义的标签时抛出。
     LabelRedefinitionError, //重复定义同一个标签时抛出。
     InvalidExpressionError, //表达式无效或者解析表达式失败时抛出。
     InvalidLineNumberError,
@@ -40,7 +41,9 @@ public:
 
     // 返回错误消息
     virtual const char* what() const noexcept override {
-        return message.c_str();
+        static std::string whatMsg;
+        whatMsg = "Line " + std::to_string(line) + " : " + message;
+        return whatMsg.c_str();
     }
 
     // 获取异常类型

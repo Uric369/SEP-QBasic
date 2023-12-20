@@ -20,7 +20,9 @@ private:
     std::vector<std::string> raw;
     std::map<std::string, VariableInfo> variables;
     std::map<int, Statement*> statements;
-    std::string print;
+    std::string input;
+    std::string output;
+//    std::string syntaxTree;
     int ifTrue;
     int currentLine;
     int maxLine;
@@ -37,9 +39,14 @@ private:
 public:
     Program();
     void Load(std::string path);
+    void LoadContent(const std::string &content);
+    std::string display() const;
     void saveLine(int lineNumber, std::string cmd);
     void exec();
     void reset();
+    std::string getOutput() const;
+    std::string getSyntaxTree() const;
+    void setInput(std::string input);
 };
 
 #endif // PROGRAM_H

@@ -23,6 +23,9 @@ std::string Statement::syntaxTree() const {
     return nullptr;
 }
 
+statementType Statement::getType() const{
+    return this->type;
+}
 
 Arithstatement::Arithstatement(){}
 
@@ -41,7 +44,6 @@ void Arithstatement::parse(Program &program) {
     this->expressionEvaluator = new ExpressionEvaluator(statement, program.variables);
 }
 
-
 void Arithstatement::exec(Program &program){}
 
 int Arithstatement::getValue(){
@@ -53,6 +55,7 @@ std::string Arithstatement::syntaxTree() const{
 }
 
 std::string Arithstatement::syntaxTreeWithOffset(int offset) const{
+    std::cout << "Arith syntaxTree" << this->expressionEvaluator->syntaxTreeWithOffset(offset);
     return this->expressionEvaluator->syntaxTreeWithOffset(offset);
 }
 
@@ -78,7 +81,7 @@ void REMstatement::exec(Program &program) {
 }
 
 std::string REMstatement::syntaxTree() const{
-    if (remark.length() > 0) return std::to_string(lineNumber) + " REM" + + "\n\t" + remark + "\n";
+    if (remark.length() > 0) return std::to_string(lineNumber) + " REM" + + "\n" + retract + remark + "\n";
     else return std::to_string(lineNumber) + " REM" + "\n";
 }
 
@@ -101,10 +104,10 @@ void LETstatement::parse(Program &program){
     }
 
     // 根据等号分割字符串
-    size_t pos = statement.find('=');
+    size_t pos = save.find('=');
     if (pos != std::string::npos) {
         // 分割出左边的字符串并去除首尾空格
-        this->LHS = trimBothEnds(statement.substr(0, pos));
+        this->LHS = trimBothEnds(save.substr(0, pos));
         if (this->LHS.length()<= 0) throw ParseException(ParseErrorType::MissingOperandError, "Missing operand on the left side of =", lineNumber);
 
         auto it = program.variables.find(this->LHS);
@@ -116,7 +119,7 @@ void LETstatement::parse(Program &program){
         }
 
         // 分割出右边的字符串并去除首尾空格
-        std::string right = trimBothEnds(statement.substr(pos + 1));
+        std::string right = trimBothEnds(save.substr(pos + 1));
         if (right.length()<= 0) throw ParseException(ParseErrorType::MissingOperandError, "Missing operand on the right side of =", lineNumber);
 
         this->RHS = Arithstatement(this->lineNumber, right);
@@ -130,6 +133,7 @@ void LETstatement::exec(Program &program){
     auto it = program.variables.find(LHS);
     if (it != program.variables.end()){
         it->second.value = this->RHS.getValue();
+        std::cout << "LET: " << this->RHS.getValue() << std::endl;
 //        it->second.usageCount++;
         this->runTime ++;
     }
@@ -143,7 +147,7 @@ void LETstatement::exec(Program &program){
 
 
 std::string LETstatement::syntaxTree() const{
-    std::string tree = std::to_string(lineNumber) + " " + "LET =\n\t";
+    std::string tree = std::to_string(lineNumber) + " " + "LET =\n" + retract;
     tree += this->LHS + "\n";
     tree += this->RHS.syntaxTreeWithOffset(1);
     return tree;
@@ -171,23 +175,23 @@ void IFstatement::parse(Program &program){
     }
 
     // 根据等号分割字符串
-    size_t pos = statement.find(" THEN ");
+    size_t pos = save.find(" THEN");
     if (pos != std::string::npos) {
         // 分割出左边的字符串并去除首尾空格
-        save = trimBothEnds(statement.substr(0, pos));
-        if (save.length()<= 0) throw ParseException(ParseErrorType::MissingOperandError, "Missing expression after IF", lineNumber);
+        std::string expression= trimBothEnds(save.substr(0, pos));
+        if (expression.length()<= 0) throw ParseException(ParseErrorType::MissingOperandError, "Missing expression after IF", lineNumber);
 
-        std::size_t operatorPos = save.find_first_of("<>=");
+        std::size_t operatorPos = expression.find_first_of("<>=");
         if (operatorPos == std::string::npos) {
             throw std::invalid_argument("No operator found in the string.");
         }
 
-        std::size_t nextOperatorPos = save.find_first_of("<>=", operatorPos + 1);
+        std::size_t nextOperatorPos = expression.find_first_of("<>=", operatorPos + 1);
         if (nextOperatorPos != std::string::npos) {
             throw std::invalid_argument("Multiple operators found in the string.");
         }
 
-        switch (save[operatorPos]) {
+        switch (expression[operatorPos]) {
             case '=':
                 this->ifOperator = Equal;
                 break;
@@ -202,44 +206,57 @@ void IFstatement::parse(Program &program){
                 throw std::logic_error("Invalid operator found.");
         }
 
-        this->LHS = Arithstatement(this->lineNumber, save.substr(0, operatorPos));
+        this->LHS = Arithstatement(this->lineNumber, expression.substr(0, operatorPos));
         this->LHS.parse(program);
-        this->RHS = Arithstatement(this->lineNumber, save.substr(operatorPos + 1));
+        this->RHS = Arithstatement(this->lineNumber, expression.substr(operatorPos + 1));
         this->RHS.parse(program);
 
         // 分割出右边的字符串并去除首尾空格
-        std::string target = trimBothEnds(statement.substr(pos + 6));
+        std::string target = trimBothEnds(save.substr(pos + 5));
         if (target.length()<= 0) throw ParseException(ParseErrorType::MissingOperandError, "Missing line number after THEN", lineNumber);
         this->toLine = std::stoi(target);
+        // 判断line是否存在
+        if (program.statements.find(toLine) == program.statements.end()){
+            throw ParseException(ParseErrorType::UndefinedLineError, "undefined line number", lineNumber);
+        }
     } else {
         throw ParseException(ParseErrorType::MissingOperandError, "IF command missing THEN ", lineNumber);
     }
 }
 
 void IFstatement::exec(Program &program){
+    std::cout << this->LHS.getValue() << "  " << this->RHS.getValue();
+    std::cout << this->ifOperator;
     switch (this->ifOperator) {
         case Equal:
         if (this->LHS.getValue() == this->RHS.getValue()) {
+            std::cout << "IF: true" << std::endl;
             this->trueTime++;
             program.currentLine = toLine;
         }
+        break;
         case Greater:
         if (this->LHS.getValue() > this->RHS.getValue()) {
+            std::cout << "IF: true" << std::endl;
             this->trueTime++;
             program.currentLine = toLine;
         }
+        break;
         case Less:
         if (this->LHS.getValue() < this->RHS.getValue()) {
+            std::cout << "IF: true" << std::endl;
             this->trueTime++;
             program.currentLine = toLine;
         }
+        break;
         default:
+        std::cout << "IF: false" << std::endl;
         this->falseTime++;
     }
 }
 
 std::string IFstatement::syntaxTree() const{
-    return "IFFFFFFFFF";
+    return "IFFFFFFFFF\n";
 }
 
 
@@ -265,11 +282,13 @@ void PRINTstatement::parse(Program &program){
 
 void PRINTstatement::exec(Program &program){
     this->runTime++;
-    program.print += std::to_string(this->print.getValue());
+    program.output += std::to_string(this->print.getValue()) + '\n';
 }
 
 std::string PRINTstatement::syntaxTree() const{
-    return std::to_string(lineNumber) + " " + "PRINT\n\t" + this->print.syntaxTreeWithOffset(1) + "\n";
+//     Todo:应该需要输出
+    return std::to_string(lineNumber) + " " + "PRINT\n" + this->print.syntaxTreeWithOffset(1);
+//    return nullptr;
 }
 
 INPUTstatement::INPUTstatement(int lineNumber, std::string statement): Statement(){
@@ -298,8 +317,8 @@ void INPUTstatement::parse(Program &program){
 }
 
 void INPUTstatement::exec(Program &program){
-    input = trimBothEnds(input);
-    int value = std::stoi(input);
+    int value = std::stoi(trimBothEnds(program.input));
+    // Todo :invalid输入 非int 抛typeerror
     auto it = program.variables.find(this->input);
     if (it != program.variables.end()){
         it->second.value = value;
@@ -312,7 +331,7 @@ void INPUTstatement::exec(Program &program){
 }
 
 std::string INPUTstatement::syntaxTree() const{
-    return std::to_string(lineNumber) + " " + "INPUT\n\t" + this->input + "\n";
+    return std::to_string(lineNumber) + " " + "INPUT\n" + retract + this->input + "\n";
 }
 
 GOTOstatement::GOTOstatement(int lineNumber, std::string statement): Statement(){
@@ -325,10 +344,13 @@ GOTOstatement::GOTOstatement(int lineNumber, std::string statement): Statement()
 
 GOTOstatement::~GOTOstatement(){}
 
-// Todo:检查行号是否存在
 void GOTOstatement::parse(Program &program){
     if (statement.size() >= 5 && statement.substr(0, 5) == "GOTO ") {
-         this->toLine = std::stoi(trimLeadingWhitespace(statement.substr(5)));
+        this->toLine = std::stoi(trimLeadingWhitespace(statement.substr(5)));
+        // 判断line是否存在
+        if (program.statements.find(toLine) == program.statements.end()){
+            throw ParseException(ParseErrorType::UndefinedLineError, "undefined line number", lineNumber);
+        }
     }
     else {
         throw ParseException(ParseErrorType::InvalidExpressionError, "invalid expression", lineNumber);
@@ -342,7 +364,7 @@ void GOTOstatement::exec(Program &program){
 }
 
 std::string GOTOstatement::syntaxTree() const {
-    return std::to_string(lineNumber) + " " + "GOTO\n\t" + std::to_string(this->toLine);
+    return std::to_string(lineNumber) + " " + "GOTO\n" + retract + std::to_string(this->toLine) + "\n";
 }
 
 ENDstatement::ENDstatement(int lineNumber, std::string statement): Statement(){

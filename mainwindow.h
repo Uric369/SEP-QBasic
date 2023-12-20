@@ -8,6 +8,7 @@
 #include <QTextStream>
 #include <QDebug>
 #include "Program.h"
+#include <QMessageBox>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

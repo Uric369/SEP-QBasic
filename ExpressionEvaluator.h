@@ -13,6 +13,7 @@
 #include <queue>
 #include <map>
 #include "Typedef.h"
+#include "Exception.h"
 
 namespace myQBasic {
     template<typename T, typename... Args>
@@ -57,16 +58,16 @@ struct BinaryOpNode : public ASTNode {
             return left->calculate() * right->calculate();
         } else if (op == "/") {
             int divisor = right->calculate();
-            if (divisor == 0) throw std::runtime_error("Division by zero");
+            if (divisor == 0) throw ParseException(ParseErrorType::DivideByZeroError, "divided by zero", -1);
             return left->calculate() / divisor;
         } else if (op == "MOD") {
             int divisor = right->calculate();
-            if (divisor == 0) throw std::runtime_error("Division by zero");
+            if (divisor == 0) throw ParseException(ParseErrorType::DivideByZeroError, "mod by zero", -1);
             return left->calculate() % divisor;
         } else if (op == "**") {
             return std::pow(left->calculate(), right->calculate());
         } else {
-            throw std::runtime_error("Unsupported operation");
+            throw ParseException(ParseErrorType::InvalidExpressionError, "invalid operator", -1);
         }
     }
 };
@@ -82,7 +83,7 @@ struct VariableNode : public ASTNode {
     int calculate() const override {
         auto it = variables.find(name);
         if (it == variables.end()) {
-            throw std::runtime_error("Variable not found");
+            throw ParseException(ParseErrorType::UndefinedVariableError, "undefined variable: " + name, -1);
         }
         it->second.usageCount++; // Increment usage count
         return it->second.value;
@@ -135,7 +136,7 @@ public:
                 if (current == nullptr) {
                     // End of a level
                     std::cout << std::endl;
-                    offset += "\t"; // Increase offset for the next level
+                    offset += retract; // Increase offset for the next level
 
                     if (!nodesQueue.empty()) {
                         nodesQueue.push(nullptr); // Marker for the next level
@@ -166,7 +167,10 @@ public:
             std::queue<const ASTNode*> nodesQueue;
             nodesQueue.push(root.get());
             nodesQueue.push(nullptr); // End-of-level marker for root
-            std::string offset(count, '\t'); // 创建含有offset个\t的字符串
+            std::string offset;
+            for (int i = 0; i < count; ++i) {
+                offset += retract; // 将n添加到a上，重复四次
+            }
             std::string syntaxTree = "";
 
             while (!nodesQueue.empty()) {
@@ -177,7 +181,7 @@ public:
                 if (current == nullptr) {
                     // End of a level
                     std::cout << std::endl;
-                    offset += "\t"; // Increase offset for the next level
+                    offset += retract; // Increase offset for the next level
 
                     if (!nodesQueue.empty()) {
                         nodesQueue.push(nullptr); // Marker for the next level
@@ -187,6 +191,9 @@ public:
                     if (const NumberNode* numNode = dynamic_cast<const NumberNode*>(current)) {
                         std::cout << offset << numNode->value << std::endl;
                         syntaxTree += offset + std::to_string(numNode->value) + "\n";
+                    } else if (const VariableNode* varNode = dynamic_cast<const VariableNode*>(current)) {
+                        std::cout << offset << varNode->name << std::endl;
+                        syntaxTree += offset + varNode->name + "\n";
                     } else if (const BinaryOpNode* binOpNode = dynamic_cast<const BinaryOpNode*>(current)) {
                         std::cout << offset << binOpNode->op << std::endl;
                         syntaxTree += offset + binOpNode->op + "\n";
