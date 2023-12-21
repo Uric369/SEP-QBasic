@@ -16,6 +16,7 @@ enum class ParseErrorType {
     LabelRedefinitionError, //重复定义同一个标签时抛出。
     InvalidExpressionError, //表达式无效或者解析表达式失败时抛出。
     InvalidLineNumberError,
+    InvalidCommandError, // 部分command必须带有line number
     DivideByZeroError, //尝试除以零时抛出。
     EndWithoutIfError, //END 语句出现在没有对应 IF 语句的上下文中时抛出。
     MissingOperandError, //表达式中缺少操作数时抛出。

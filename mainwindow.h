@@ -8,6 +8,7 @@
 #include <QTextStream>
 #include <QDebug>
 #include "Program.h"
+#include "Exception.h"
 #include <QMessageBox>
 
 QT_BEGIN_NAMESPACE
@@ -30,7 +31,6 @@ private:
     void Run();
     void Clear();
     void onLineEditReturnPressed();
-
 private:
     Ui::MainWindow *ui;
 };

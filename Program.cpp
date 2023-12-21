@@ -1,10 +1,24 @@
 #include "Program.h"
 #include "Statement.h"
 
+bool hasContentAfterFirstNumber(const std::string& str) {
+    bool numberFound = false; // 标记是否找到数字
+    for (char ch : str) {
+        if (std::isdigit(ch)) { // 如果字符是数字
+            numberFound = true; // 设置标记
+        } else if (numberFound && !std::isspace(ch)) {
+            // 如果之前找到数字，并且当前字符不是空格，则返回true
+            return true;
+        }
+    }
+    // 如果没有找到非空格字符或没有找到数字，则返回false
+    return false;
+}
+
 Program::Program(){
     this->currentLine = -1;
-    this->maxLine = -1;
-    this->ifTrue = false;
+//    this->maxLine = -1;
+//    this->ifTrue = false;
     this->hasEND = false;
 }
 
@@ -15,8 +29,8 @@ void Program::reset(){
     this->input.clear();
     this->output.clear();
     this->currentLine = -1;
-    this->maxLine = -1;
-    this->ifTrue = false;
+//    this->maxLine = -1;
+//    this->ifTrue = false;
     this->hasEND = false;
 }
 
@@ -48,11 +62,11 @@ void Program::Load(const std::string path){
             }
 
             // Check if the current line number is greater than the max line number
-            if (lineNumber <= maxLine) {
-                throw ParseException(ParseErrorType::InvalidLineNumberError, "decreasing line number", lineNumber);
-                return;
-            }
-            maxLine = lineNumber;
+//            if (lineNumber <= maxLine) {
+//                throw ParseException(ParseErrorType::InvalidLineNumberError, "decreasing line number", lineNumber);
+//                return;
+//            }
+//            maxLine = lineNumber;
 
             // Remove the line number and the following space character (if exists)
             size_t spacePos = line.find(' ');
@@ -75,7 +89,7 @@ void Program::Load(const std::string path){
 void Program::LoadContent(const std::string &content) {
     std::istringstream file(content);
     std::string line;
-    int maxLine = -1; // Initialize with an invalid line number
+    int cur_line = -1; // Initialize with an invalid line number
 
     while (getline(file, line)) {
         // Remove leading spaces
@@ -89,14 +103,10 @@ void Program::LoadContent(const std::string &content) {
         raw.push_back(line);
         int lineNumber;
         if (!(iss >> lineNumber)) {
-            throw ParseException(ParseErrorType::InvalidLineNumberError, "invalid line number after", maxLine);
+            throw ParseException(ParseErrorType::InvalidLineNumberError, "invalid line number after", cur_line);
         }
 
-        // Check if the current line number is greater than the max line number
-        if (lineNumber <= maxLine) {
-            throw ParseException(ParseErrorType::InvalidLineNumberError, "decreasing line number", lineNumber);
-        }
-        maxLine = lineNumber;
+        cur_line = lineNumber;
 
         // Remove the line number and the following space character (if exists)
         size_t spacePos = line.find(' ');
@@ -116,17 +126,18 @@ void Program::LoadContent(const std::string &content) {
 
 std::string Program::display() const{
     std::string result;
-    for (const auto& line : raw) {
-        std::cout << line << '\n';
-        result += line + '\n';
+    for (auto it = this->statements.begin(); it != statements.end(); ++it) {
+        result += it->second->getRaw();
     }
     return result;
 }
 
 void Program::saveLine(int lineNumber, std::string cmd){
+    std::cout << "saveLine: " << cmd << std::endl;
     std::istringstream iss(cmd);
     std::string firstWord;
     iss >> firstWord;
+    if (firstWord.length() == 0) return;
     if (firstWord == "REM") {
         statements[lineNumber] = new REMstatement(lineNumber, cmd);
         return;
@@ -159,6 +170,37 @@ void Program::saveLine(int lineNumber, std::string cmd){
     throw ParseException(ParseErrorType::InvalidExpressionError, "unknown expression", lineNumber);
 }
 
+void Program::execLine(std::string cmd){
+    std::istringstream iss(cmd);
+    std::string firstWord;
+    iss >> firstWord;
+    if (firstWord == "LET"){
+        this->output.clear();
+        LETstatement execStmt = LETstatement(-1, cmd);
+        execStmt.parse(*this);
+        execStmt.exec(*this);
+        return;
+    }
+    if (firstWord == "PRINT"){
+        this->output.clear();
+        PRINTstatement execStmt = PRINTstatement(-1, cmd);
+        execStmt.parse(*this);
+        execStmt.exec(*this);
+        return;
+    }
+    if (firstWord == "INPUT"){
+        this->output.clear();
+        INPUTstatement execStmt = INPUTstatement(-1, cmd);
+        execStmt.parse(*this);
+        execStmt.exec(*this);
+        return;
+    }
+    else {
+        throw ParseException(ParseErrorType::InvalidCommandError, "invalid command", -1);
+    }
+}
+
+
 void Program::exec(){
     bool iteratorUpdated = false;
 
@@ -168,10 +210,9 @@ void Program::exec(){
         Statement* stmt = it->second; // Get the statement object.
 
         if (stmt) { // Ensure the pointer to the statement is not null.
-            if (stmt->type == statementType::END) break; // Stop if the statement type is END.
-
             stmt->parse(*this); // Parse the statement.
             stmt->exec(*this); // Execute the statement.
+            if (stmt->type == statementType::END) break; // Stop if the statement type is END.
 
             // If the statement is an IF or GOTO, check if the line number has changed.
             if (stmt->type == statementType::IF || stmt->type == statementType::GOTO) {
@@ -207,7 +248,85 @@ std::string Program::getSyntaxTree() const{
     return syntaxTree;
 }
 
+std::string Program::getSyntaxTreeWithRunStatistics() const{
+    std::string syntaxTree;
+    for (auto it = this->statements.begin(); it != statements.end(); ++it) {
+        Statement* stmt = it->second;
+        syntaxTree += stmt->syntaxTreeWithRunStatistics();
+    }
+    return syntaxTree;
+}
+
 void Program::setInput(std::string input){
     this->input = input;
 }
 
+void Program::preRun(){
+    variables.clear();
+    this->input.clear();
+    this->output.clear();
+    this->currentLine = -1;
+    for (auto it = this->statements.begin(); it != statements.end(); ++it) {
+        it->second->setRunStatistics(0);
+    }
+}
+
+//void Program::cmd(std::string cmd){
+//    cmd = trimBothEnds(cmd);
+//    if (cmd.empty()) {
+//        return; // 返回空字符串，因为cmd为空
+//    }
+
+//    if (std::isdigit(cmd[0])) {
+//        // 首个字符是数字，找到第一个空格并提取前面的数字
+//        size_t space_pos = cmd.find(' ');
+//        int lineNumber = std::stoi(cmd.substr(0, space_pos));
+//        std::string stmt = trimBothEnds(cmd.substr(space_pos + 1));
+//        if (stmt.length()==0){
+//            deleteStatement(lineNumber);
+//        }
+//        else {
+//            updateStatement(lineNumber, stmt);
+//        }
+//    } else if (std::isalpha(cmd[0])) {
+//        // 首个字符是字母，找到第一个空格并提取前面的字符串
+//        preRun();
+//        exec();
+//        execLine(cmd);
+//    } else {
+//        // 首个字符既不是数字也不是字母
+//        throw ParseException(ParseErrorType::InvalidExpressionError, "invalid command", -1);
+//    }
+//}
+
+void Program::updateStatement(int lineNumber, std::string statement){
+    auto it = this->statements.find(lineNumber);
+    if (it != this->statements.end()){
+        delete it->second;
+        statements.erase(it);
+    }
+    saveLine(lineNumber, trimBothEnds(statement));
+}
+
+void Program::deleteStatement(int lineNumber){
+    auto it = this->statements.find(lineNumber);
+    if (it != this->statements.end()){
+        delete it->second;
+        statements.erase(it);
+    }
+    else {
+        throw ParseException(ParseErrorType::UndefinedLineError, "delete invalid line", lineNumber);
+    }
+}
+
+void Program::edit(std::string cmd){
+    size_t space_pos = cmd.find(' ');
+    int lineNumber = std::stoi(cmd.substr(0, space_pos));
+    if (hasContentAfterFirstNumber(cmd)){
+        std::string stmt = cmd.substr(space_pos + 1);
+        updateStatement(lineNumber, stmt);
+    }
+    else {
+        deleteStatement(lineNumber);
+    }
+}

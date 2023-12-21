@@ -28,4 +28,6 @@ enum Operator {
 extern const std::string retract;
 
 
+
+
 #endif // TYPEDEF_H

@@ -11,9 +11,12 @@
 #include <string>
 #include <algorithm>
 #include "Typedef.h"
+#include "ExpressionEvaluator.h"
 #include <map>
 
 class Statement;
+class ExpressionEvaluator;
+bool hasContentAfterFirstNumber(const std::string& str);
 
 class Program {
 private:
@@ -23,9 +26,9 @@ private:
     std::string input;
     std::string output;
 //    std::string syntaxTree;
-    int ifTrue;
+//    int ifTrue;
     int currentLine;
-    int maxLine;
+//    int maxLine;
     bool hasEND;
     friend class Statement;
     friend class Arithstatement;
@@ -36,6 +39,11 @@ private:
     friend class INPUTstatement;
     friend class GOTOstatement;
     friend class ENDstatement;
+    friend class ExpressionEvaluator;
+    friend struct VariableNode;
+
+    void updateStatement(int lineNumber, std::string statement);
+    void deleteStatement(int lineNumber);
 public:
     Program();
     void Load(std::string path);
@@ -43,9 +51,14 @@ public:
     std::string display() const;
     void saveLine(int lineNumber, std::string cmd);
     void exec();
+    void execLine(std::string cmd);
+    void cmd(std::string cmd);
     void reset();
+    void preRun();
+    void edit(std::string cmd);
     std::string getOutput() const;
     std::string getSyntaxTree() const;
+    std::string getSyntaxTreeWithRunStatistics() const;
     void setInput(std::string input);
 };
 
