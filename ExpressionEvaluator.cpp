@@ -12,15 +12,15 @@ void trimWhitespace(const std::string& expr, size_t& pos) {
 }
 
 
-std::unique_ptr<ASTNode> parsePrimary(const std::string& expr, size_t& pos, Program *program) {
+std::unique_ptr<ASTNode> parsePrimary(const std::string& expr, size_t& pos, Program *program, int lineNumber) {
     trimWhitespace(expr, pos);
 
     if (expr[pos] == '(') {
         ++pos; // Skip '('
-        auto node = parseExpression(expr, pos, program);
+        auto node = parseExpression(expr, pos, program, lineNumber);
         trimWhitespace(expr, pos);
         if (expr[pos] != ')') {
-            throw std::runtime_error("Expected ')'");
+            throw ParseException(ParseErrorType::InvalidExpressionError, "missing corresponding ')'", lineNumber);
         }
         ++pos; // Skip ')'
         return node;
@@ -31,7 +31,7 @@ std::unique_ptr<ASTNode> parsePrimary(const std::string& expr, size_t& pos, Prog
                 ++pos;
             }
             std::string varName = expr.substr(startPos, pos - startPos);
-            return myQBasic::make_unique<VariableNode>(varName, program);
+            return myQBasic::make_unique<VariableNode>(varName, program, lineNumber);
         } else {
         bool negative = false;
         if (expr[pos] == '-') {
@@ -50,16 +50,16 @@ std::unique_ptr<ASTNode> parsePrimary(const std::string& expr, size_t& pos, Prog
 }
 
 // Parse an exponentiation expression
-std::unique_ptr<ASTNode> parseFactor(const std::string& expr, size_t& pos, Program *program) {
-    auto node = parsePrimary(expr, pos, program);
+std::unique_ptr<ASTNode> parseFactor(const std::string& expr, size_t& pos, Program *program, int lineNumber) {
+    auto node = parsePrimary(expr, pos, program, lineNumber);
 
     trimWhitespace(expr, pos);
 
     while (pos < expr.size() && expr.substr(pos, 2) == "**") {
         std::string op = expr.substr(pos, 2);
         pos += 2; // Skip '**'
-        auto right = parseFactor(expr, pos, program); // Right associative
-        node = myQBasic::make_unique<BinaryOpNode>(op, std::move(node), std::move(right));
+        auto right = parseFactor(expr, pos, program, lineNumber); // Right associative
+        node = myQBasic::make_unique<BinaryOpNode>(op, std::move(node), std::move(right), lineNumber);
         trimWhitespace(expr, pos);
     }
 
@@ -67,8 +67,8 @@ std::unique_ptr<ASTNode> parseFactor(const std::string& expr, size_t& pos, Progr
 }
 
 // Parse a multiplication/division/modulo expression
-std::unique_ptr<ASTNode> parseTerm(const std::string& expr, size_t& pos, Program *program) {
-    auto node = parseFactor(expr, pos, program);
+std::unique_ptr<ASTNode> parseTerm(const std::string& expr, size_t& pos, Program *program, int lineNumber) {
+    auto node = parseFactor(expr, pos, program, lineNumber);
 
     trimWhitespace(expr, pos);
 
@@ -81,8 +81,8 @@ std::unique_ptr<ASTNode> parseTerm(const std::string& expr, size_t& pos, Program
             op = expr[pos];
             pos++; // Skip '*' or '/'
         }
-        auto right = parseFactor(expr, pos, program);
-        node = myQBasic::make_unique<BinaryOpNode>(op, std::move(node), std::move(right));
+        auto right = parseFactor(expr, pos, program, lineNumber);
+        node = myQBasic::make_unique<BinaryOpNode>(op, std::move(node), std::move(right), lineNumber);
         trimWhitespace(expr, pos);
     }
 
@@ -90,16 +90,16 @@ std::unique_ptr<ASTNode> parseTerm(const std::string& expr, size_t& pos, Program
 }
 
 // Parse an addition/subtraction expression
-std::unique_ptr<ASTNode> parseExpression(const std::string& expr, size_t& pos, Program *program) {
-    auto node = parseTerm(expr, pos, program);
+std::unique_ptr<ASTNode> parseExpression(const std::string& expr, size_t& pos, Program *program, int lineNumber) {
+    auto node = parseTerm(expr, pos, program, lineNumber);
 
     trimWhitespace(expr, pos);
 
     while (pos < expr.size() && (expr[pos] == '+' || expr[pos] == '-')) {
         std::string op(1, expr[pos]);
         pos++; // Skip '+' or '-'
-        auto right = parseTerm(expr, pos, program);
-        node = myQBasic::make_unique<BinaryOpNode>(op, std::move(node), std::move(right));
+        auto right = parseTerm(expr, pos, program, lineNumber);
+        node = myQBasic::make_unique<BinaryOpNode>(op, std::move(node), std::move(right), lineNumber);
         trimWhitespace(expr, pos);
     }
 
@@ -130,8 +130,8 @@ int NumberNode::calculate() const {
 }
 
 
-BinaryOpNode::BinaryOpNode(std::string operation, std::unique_ptr<ASTNode> lhs, std::unique_ptr<ASTNode> rhs)
-            : op(std::move(operation)), left(std::move(lhs)), right(std::move(rhs)) {}
+BinaryOpNode::BinaryOpNode(std::string operation, std::unique_ptr<ASTNode> lhs, std::unique_ptr<ASTNode> rhs, int lineNumber)
+            : op(std::move(operation)), left(std::move(lhs)), right(std::move(rhs)), lineNumber(lineNumber) {}
 
 int BinaryOpNode::calculate() const{
         if (op == "+") {
@@ -142,38 +142,38 @@ int BinaryOpNode::calculate() const{
             return left->calculate() * right->calculate();
         } else if (op == "/") {
             int divisor = right->calculate();
-            if (divisor == 0) throw ParseException(ParseErrorType::DivideByZeroError, "divided by zero", -1);
+            if (divisor == 0) throw ParseException(ParseErrorType::DivideByZeroError, "divided by zero", lineNumber);
             return left->calculate() / divisor;
         } else if (op == "MOD") {
             int divisor = right->calculate();
-            if (divisor == 0) throw ParseException(ParseErrorType::DivideByZeroError, "mod by zero", -1);
+            if (divisor == 0) throw ParseException(ParseErrorType::DivideByZeroError, "mod by zero", lineNumber);
             if (divisor < 0) return left->calculate() % divisor + divisor;
             return left->calculate() % divisor;
         } else if (op == "**") {
             return std::pow(left->calculate(), right->calculate());
         } else {
-            throw ParseException(ParseErrorType::InvalidExpressionError, "invalid operator", -1);
+            throw ParseException(ParseErrorType::InvalidExpressionError, "invalid operator", lineNumber);
         }
 }
 
 
 // Variable Node
-VariableNode::VariableNode(std::string varName, Program *program)
-        : name(std::move(varName)), program(program) {}
+VariableNode::VariableNode(std::string varName, Program *program, int lineNumber)
+        : name(std::move(varName)), program(program), lineNumber(lineNumber) {}
 
 int VariableNode::calculate() const {
         auto it = program->variables.find(name);
         if (it == program->variables.end()) {
-            throw ParseException(ParseErrorType::UndefinedVariableError, "undefined variable: " + name, -1);
+            throw ParseException(ParseErrorType::UndefinedVariableError, "undefined variable: " + name, lineNumber);
         }
         it->second.usageCount++; // Increment usage count
         return it->second.value;
 }
 
-ExpressionEvaluator::ExpressionEvaluator(const std::string& expression, Program *program)
-        : program(program) {
+ExpressionEvaluator::ExpressionEvaluator(const std::string& expression, Program *program, int lineNumber)
+        : program(program), lineNumber(lineNumber) {
         size_t pos = 0;
-        root = parseExpression(expression, pos, program);
+        root = parseExpression(expression, pos, program, lineNumber);
     }
 
 int ExpressionEvaluator::getValue() const {

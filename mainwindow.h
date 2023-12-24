@@ -10,6 +10,7 @@
 #include "Program.h"
 #include "Exception.h"
 #include <QMessageBox>
+#include "Typedef.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -22,7 +23,9 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-
+public slots:
+    void requestInput();
+    void onInputReceived();
 private slots:
     void on_cmdLineEdit_editingFinished();
 private:
@@ -30,6 +33,7 @@ private:
     void Load();
     void Run();
     void Clear();
+    void Help();
     void onLineEditReturnPressed();
 private:
     Ui::MainWindow *ui;

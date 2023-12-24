@@ -1,5 +1,7 @@
 #include "Program.h"
 #include "Statement.h"
+//#include "mainwindow.h"
+#include <QObject>
 
 bool hasContentAfterFirstNumber(const std::string& str) {
     bool numberFound = false; // 标记是否找到数字
@@ -15,12 +17,13 @@ bool hasContentAfterFirstNumber(const std::string& str) {
     return false;
 }
 
-Program::Program(){
-    this->currentLine = -1;
-//    this->maxLine = -1;
-//    this->ifTrue = false;
-    this->hasEND = false;
-}
+//Program::Program(QObject *parent) : QObject(parent) {
+//    this->isInputFinished = false;
+//    this->currentLine = -1;
+////    this->maxLine = -1;
+////    this->ifTrue = false;
+//    this->hasEND = false;
+//}
 
 void Program::reset(){
     this->variables.clear();
@@ -32,6 +35,8 @@ void Program::reset(){
 //    this->maxLine = -1;
 //    this->ifTrue = false;
     this->hasEND = false;
+//    this->isInputFinished = false;
+    this->isRunning = false;
 }
 
 void Program::Load(const std::string path){
@@ -211,9 +216,15 @@ void Program::exec(){
 
         if (stmt) { // Ensure the pointer to the statement is not null.
             stmt->parse(*this); // Parse the statement.
+            if (stmt->type == statementType::INPUT) {
+//                std::lock_guard<std::mutex> lock(this->inputMutex); // Locks the mutex
+                emit this->requestInput();
+//                while (!isInputFinished){}
+                 waitUntilInputIsFinished(); // 等待用户输入
+                std::cout << "program input: " << input << std::endl;
+            }
             stmt->exec(*this); // Execute the statement.
             if (stmt->type == statementType::END) break; // Stop if the statement type is END.
-
             // If the statement is an IF or GOTO, check if the line number has changed.
             if (stmt->type == statementType::IF || stmt->type == statementType::GOTO) {
                 // If the current line number has changed, update the iterator to the new line.
@@ -330,3 +341,4 @@ void Program::edit(std::string cmd){
         deleteStatement(lineNumber);
     }
 }
+

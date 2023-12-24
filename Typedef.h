@@ -27,6 +27,7 @@ enum Operator {
 
 extern const std::string retract;
 
+extern const std::string HELP;
 
 
 

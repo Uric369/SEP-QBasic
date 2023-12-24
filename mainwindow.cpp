@@ -12,6 +12,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 连接QLineEdit的returnPressed信号到自定义槽函数
     connect(ui->cmdLineEdit, &QLineEdit::returnPressed, this, &MainWindow::onLineEditReturnPressed);
+
+    connect(&this->program, &Program::requestInput, this, &MainWindow::requestInput);
 }
 
 MainWindow::~MainWindow()
@@ -21,6 +23,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::Run(){
     try {
+        program.isRunning = true;
     std::cout << "Run" << std::endl;
     program.preRun();
     program.exec();
@@ -28,13 +31,14 @@ void MainWindow::Run(){
     ui->textBrowser->setPlainText(QString::fromStdString(program.getOutput()));
     ui->treeDisplay->setPlainText(QString::fromStdString(program.getSyntaxTreeWithRunStatistics()));
 //    ui->treeDisplay->setPlainText(QString::fromStdString(program.getSyntaxTree()));
+    program.isRunning = false;
     }
     catch(ParseException &e) {
         ui->textBrowser->setPlainText(e.what());
     } catch (const std::invalid_argument& ia) {
         // 如果输入的不是整数，将会捕获到invalid_argument异常
         std::cerr << "Error: Invalid input, not an integer." << std::endl;
-        ui->textBrowser->setPlainText(ia.what());
+        ui->textBrowser->setPlainText("Error: Invalid input, not an integer.");
     } catch (const std::out_of_range& oor) {
         // 如果整数超出了int的范围，将会捕获到out_of_range异常
         std::cerr << "Error: Integer out of range." << std::endl;
@@ -53,6 +57,9 @@ void MainWindow::Clear(){
 // 添加一个新的槽函数用来处理returnPressed信号
 void MainWindow::onLineEditReturnPressed() {
     try {
+        if (program.isRunning) {
+            QMessageBox::warning(this, tr("Error"), tr("program is running."));
+        }
     QString text = ui->cmdLineEdit->text(); // 获取QLineEdit的文本
     std::string stdText = text.toStdString(); // Convert QString to std::string
     std::cout << "Input: " << stdText << std::endl;
@@ -67,22 +74,28 @@ void MainWindow::onLineEditReturnPressed() {
     iss >> firstWord;
     if (firstWord == "RUN"){
         this->Run();
+        ui->cmdLineEdit->clear();
         return;
     }
     if (firstWord == "LOAD"){
         this->Load();
+        ui->cmdLineEdit->clear();
         return;
     }
     if (firstWord == "CLEAR"){
         this->Clear();
+        ui->cmdLineEdit->clear();
         return;
     }
     if (firstWord == "HELP"){
 // TODO
+        this->Help();
+        ui->cmdLineEdit->clear();
         return;
     }
     if (firstWord == "QUIT"){
         this->close();
+        ui->cmdLineEdit->clear();
         return;
     }
 //    program.cmd(stdText);
@@ -170,4 +183,28 @@ void MainWindow::Load()
 }
 
 
+void MainWindow::requestInput(){
+    std::cout << "main window requestInput" << std::endl;
+    ui->cmdLineEdit->setText("?");
+    ui->cmdLineEdit->setFocus();
+
+    disconnect(ui->cmdLineEdit, &QLineEdit::returnPressed, this, &MainWindow::onLineEditReturnPressed);
+    connect(ui->cmdLineEdit, &QLineEdit::returnPressed, this, &MainWindow::onInputReceived);
+}
+
+void MainWindow::onInputReceived(){
+    std::cout << "mainwindow oninputReceived" << ui->cmdLineEdit->text().toStdString().substr(1) << std::endl;
+
+    disconnect(ui->cmdLineEdit, &QLineEdit::returnPressed, this, &MainWindow::onInputReceived);
+    connect(ui->cmdLineEdit, &QLineEdit::returnPressed, this, &MainWindow::onInputReceived);
+
+    program.setInput(ui->cmdLineEdit->text().toStdString().substr(1));
+//    program.isInputFinished = true;
+    ui->cmdLineEdit->clear();
+    emit program.inputFinished(); // 发出输入完成的信号
+}
+
+void MainWindow::Help(){
+    ui->textBrowser->setPlainText(QString::fromStdString(HELP));
+}
 

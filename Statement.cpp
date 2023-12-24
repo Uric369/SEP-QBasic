@@ -69,7 +69,7 @@ void Arithstatement::setRunStatistics(int n){
 }
 
 void Arithstatement::parse(Program &program) {
-    this->expressionEvaluator = new ExpressionEvaluator(statement, &program);
+    this->expressionEvaluator = new ExpressionEvaluator(statement, &program, lineNumber);
 }
 
 void Arithstatement::exec(Program &program){}
@@ -332,12 +332,12 @@ void IFstatement::parse(Program &program){
 
         std::size_t operatorPos = expression.find_first_of("<>=");
         if (operatorPos == std::string::npos) {
-            throw std::invalid_argument("No valid operator found in the string.");
+            throw ParseException(ParseErrorType::SyntaxError, "No valid operator found in the IF commmand.", lineNumber);
         }
 
         std::size_t nextOperatorPos = expression.find_first_of("<>=", operatorPos + 1);
         if (nextOperatorPos != std::string::npos) {
-            throw std::invalid_argument("Multiple operators found in the string.");
+            throw ParseException(ParseErrorType::SyntaxError, "Multiple operators found in the string.", lineNumber);
         }
 
 //        switch (expression[operatorPos]) {
@@ -384,6 +384,7 @@ void IFstatement::exec(Program &program){
             this->trueTime++;
             program.currentLine = toLine;
         }
+        else this->falseTime++;
         break;
         case '>':
         if (this->LHS.getValue() > this->RHS.getValue()) {
@@ -391,6 +392,7 @@ void IFstatement::exec(Program &program){
             this->trueTime++;
             program.currentLine = toLine;
         }
+        else this->falseTime++;
         break;
         case '<':
         if (this->LHS.getValue() < this->RHS.getValue()) {
@@ -398,6 +400,7 @@ void IFstatement::exec(Program &program){
             this->trueTime++;
             program.currentLine = toLine;
         }
+        else this->falseTime++;
         break;
         default:
         std::cout << "IF: false" << std::endl;

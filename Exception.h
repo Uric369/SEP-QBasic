@@ -43,7 +43,7 @@ public:
     // 返回错误消息
     virtual const char* what() const noexcept override {
         static std::string whatMsg;
-        whatMsg = "Line " + std::to_string(line) + " : " + message;
+        whatMsg = message;
         return whatMsg.c_str();
     }
 

@@ -38,34 +38,37 @@ struct BinaryOpNode : public ASTNode {
     std::unique_ptr<ASTNode> left;
     std::unique_ptr<ASTNode> right;
 
-    BinaryOpNode(std::string operation, std::unique_ptr<ASTNode> lhs, std::unique_ptr<ASTNode> rhs);
+    BinaryOpNode(std::string operation, std::unique_ptr<ASTNode> lhs, std::unique_ptr<ASTNode> rhs, int lineNumber);
 
     int calculate() const override;
+    int lineNumber;
 };
 
 struct VariableNode : public ASTNode {
     std::string name;
     Program *program;
 
-    VariableNode(std::string varName, Program *program);
+    VariableNode(std::string varName, Program *program, int lineNumber);
 
     int calculate() const override;
+    int lineNumber;
 };
 
 void trimWhitespace(const std::string& expr, size_t& pos);
 
-std::unique_ptr<ASTNode> parseExpression(const std::string& expr, size_t& pos, Program *program);
-std::unique_ptr<ASTNode> parseTerm(const std::string& expr, size_t& pos, Program *program);
-std::unique_ptr<ASTNode> parseFactor(const std::string& expr, size_t& pos, Program *program);
-std::unique_ptr<ASTNode> parsePrimary(const std::string& expr, size_t& pos, Program *program);
+std::unique_ptr<ASTNode> parseExpression(const std::string& expr, size_t& pos, Program *program, int lineNumber);
+std::unique_ptr<ASTNode> parseTerm(const std::string& expr, size_t& pos, Program *program, int lineNumber);
+std::unique_ptr<ASTNode> parseFactor(const std::string& expr, size_t& pos, Program *program, int lineNumber);
+std::unique_ptr<ASTNode> parsePrimary(const std::string& expr, size_t& pos, Program *program, int lineNumber);
 
 class ExpressionEvaluator {
 private:
     std::unique_ptr<ASTNode> root;
     Program *program;
     std::vector<std::string> splitByNewline(const std::string& str) const;
+    int lineNumber;
 public:
-    ExpressionEvaluator(const std::string& expression, Program *program);
+    ExpressionEvaluator(const std::string& expression, Program *program, int lineNumber);
 
     int getValue() const;
 
