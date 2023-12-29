@@ -33,6 +33,7 @@ public:
     virtual std::string syntaxTreeWithRunStatistics() const;
     statementType getType() const;
     std::string getRaw()const;
+    int getRunTime() const;
 };
 
 

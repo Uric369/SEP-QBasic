@@ -134,6 +134,7 @@ BinaryOpNode::BinaryOpNode(std::string operation, std::unique_ptr<ASTNode> lhs, 
             : op(std::move(operation)), left(std::move(lhs)), right(std::move(rhs)), lineNumber(lineNumber) {}
 
 int BinaryOpNode::calculate() const{
+    std::cout << op << std::endl;
         if (op == "+") {
             return left->calculate() + right->calculate();
         } else if (op == "-") {
@@ -167,6 +168,10 @@ int VariableNode::calculate() const {
             throw ParseException(ParseErrorType::UndefinedVariableError, "undefined variable: " + name, lineNumber);
         }
         it->second.usageCount++; // Increment usage count
+        for (const auto& pair : program->variables) {
+            std::cout << "Variable Name: " << pair.first
+                      << ", Usage Count: " << pair.second.usageCount << std::endl;
+        }
         return it->second.value;
 }
 

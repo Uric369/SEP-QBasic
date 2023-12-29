@@ -197,6 +197,11 @@ void Program::execLine(std::string cmd){
         this->output.clear();
         INPUTstatement execStmt = INPUTstatement(-1, cmd);
         execStmt.parse(*this);
+
+        emit this->requestInput();
+        waitUntilInputIsFinished(); // 等待用户输入
+        std::cout << "program input: " << input << std::endl;
+
         execStmt.exec(*this);
         return;
     }
@@ -224,6 +229,12 @@ void Program::exec(){
                 std::cout << "program input: " << input << std::endl;
             }
             stmt->exec(*this); // Execute the statement.
+            std::cout << "After line " << currentLine << ":\n";
+            // 遍历并输出变量名和使用次数
+            for (const auto& pair : variables) {
+                std::cout << "Variable Name: " << pair.first
+                          << ", Usage Count: " << pair.second.usageCount << std::endl;
+            }
             if (stmt->type == statementType::END) break; // Stop if the statement type is END.
             // If the statement is an IF or GOTO, check if the line number has changed.
             if (stmt->type == statementType::IF || stmt->type == statementType::GOTO) {
@@ -250,19 +261,26 @@ std::string Program::getOutput() const{
     return this->output;
 }
 
-std::string Program::getSyntaxTree() const{
+std::string Program::getSyntaxTree() {
     std::string syntaxTree;
     for (auto it = this->statements.begin(); it != statements.end(); ++it) {
         Statement* stmt = it->second;
+        stmt->parse(*this);
         syntaxTree += stmt->syntaxTree();
     }
     return syntaxTree;
 }
 
-std::string Program::getSyntaxTreeWithRunStatistics() const{
+std::string Program::getSyntaxTreeWithRunStatistics(){
     std::string syntaxTree;
     for (auto it = this->statements.begin(); it != statements.end(); ++it) {
         Statement* stmt = it->second;
+        std::cout << "line " << it->first << std::endl;
+        std::cout << "RunTime" << stmt->getRunTime() << std::endl;
+//        if (stmt->getRunTime() == 0) {
+//            std::cout << "Parse" << std::endl;
+            stmt->parse(*this);
+//        }
         syntaxTree += stmt->syntaxTreeWithRunStatistics();
     }
     return syntaxTree;
@@ -282,33 +300,6 @@ void Program::preRun(){
     }
 }
 
-//void Program::cmd(std::string cmd){
-//    cmd = trimBothEnds(cmd);
-//    if (cmd.empty()) {
-//        return; // 返回空字符串，因为cmd为空
-//    }
-
-//    if (std::isdigit(cmd[0])) {
-//        // 首个字符是数字，找到第一个空格并提取前面的数字
-//        size_t space_pos = cmd.find(' ');
-//        int lineNumber = std::stoi(cmd.substr(0, space_pos));
-//        std::string stmt = trimBothEnds(cmd.substr(space_pos + 1));
-//        if (stmt.length()==0){
-//            deleteStatement(lineNumber);
-//        }
-//        else {
-//            updateStatement(lineNumber, stmt);
-//        }
-//    } else if (std::isalpha(cmd[0])) {
-//        // 首个字符是字母，找到第一个空格并提取前面的字符串
-//        preRun();
-//        exec();
-//        execLine(cmd);
-//    } else {
-//        // 首个字符既不是数字也不是字母
-//        throw ParseException(ParseErrorType::InvalidExpressionError, "invalid command", -1);
-//    }
-//}
 
 void Program::updateStatement(int lineNumber, std::string statement){
     auto it = this->statements.find(lineNumber);

@@ -78,13 +78,13 @@ public:
     void saveLine(int lineNumber, std::string cmd);
     void exec();
     void execLine(std::string cmd);
-    void cmd(std::string cmd);
+//    void cmd(std::string cmd);
     void reset();
     void preRun();
     void edit(std::string cmd);
     std::string getOutput() const;
-    std::string getSyntaxTree() const;
-    std::string getSyntaxTreeWithRunStatistics() const;
+    std::string getSyntaxTree() ;
+    std::string getSyntaxTreeWithRunStatistics();
     void setInput(std::string input);
 signals:
     void requestInput();

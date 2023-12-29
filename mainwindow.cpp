@@ -87,8 +87,7 @@ void MainWindow::onLineEditReturnPressed() {
         ui->cmdLineEdit->clear();
         return;
     }
-    if (firstWord == "HELP"){
-// TODO
+    if (firstWord == "HELP"){ 
         this->Help();
         ui->cmdLineEdit->clear();
         return;
@@ -159,7 +158,9 @@ void MainWindow::Load()
             program.LoadContent(content); // Assuming program.Load() can take file content as a string
 
             // Set the content in the UI's CodeDisplay
-            ui->CodeDisplay->setPlainText(QString::fromStdString(content));
+            ui->CodeDisplay->setPlainText(QString::fromStdString(program.display()));
+            ui->textBrowser->clear();
+            ui->treeDisplay->clear();
         }
         else{
             QMessageBox::warning(this, tr("Error"), tr("Could not open the file."));
@@ -196,7 +197,7 @@ void MainWindow::onInputReceived(){
     std::cout << "mainwindow oninputReceived" << ui->cmdLineEdit->text().toStdString().substr(1) << std::endl;
 
     disconnect(ui->cmdLineEdit, &QLineEdit::returnPressed, this, &MainWindow::onInputReceived);
-    connect(ui->cmdLineEdit, &QLineEdit::returnPressed, this, &MainWindow::onInputReceived);
+    connect(ui->cmdLineEdit, &QLineEdit::returnPressed, this, &MainWindow::onLineEditReturnPressed);
 
     program.setInput(ui->cmdLineEdit->text().toStdString().substr(1));
 //    program.isInputFinished = true;

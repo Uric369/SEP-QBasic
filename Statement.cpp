@@ -5,7 +5,7 @@ std::string trimLeadingWhitespace(const std::string& str) {
     return (start == std::string::npos) ? "" : str.substr(start);
 }
 
-// 去掉字符串首尾的空格
+// trim blank on both ends
 std::string trimBothEnds(const std::string& str) {
     size_t first = str.find_first_not_of(' ');
     if (std::string::npos == first) {
@@ -28,8 +28,9 @@ std::vector<std::string> split(const std::string &str, char delim) {
     return tokens;
 }
 
-
-
+int Statement::getRunTime() const{
+    return this->runTime;
+}
 
 Statement::Statement(){}
 
@@ -156,10 +157,10 @@ void LETstatement::parse(Program &program){
         throw ParseException(ParseErrorType::InvalidExpressionError, "invalid expression", lineNumber);
     }
 
-    // 根据等号分割字符串
+    // split by "="
     size_t pos = save.find('=');
     if (pos != std::string::npos) {
-        // 分割出左边的字符串并去除首尾空格
+        // extract the left hand side
         this->LHS = trimBothEnds(save.substr(0, pos));
         if (this->LHS.length()<= 0) throw ParseException(ParseErrorType::MissingOperandError, "Missing operand on the left side of =", lineNumber);
         this->LHS_sta = Arithstatement(this->lineNumber, this->LHS);
@@ -169,11 +170,11 @@ void LETstatement::parse(Program &program){
         if (it == program.variables.end()) {
             VariableInfo varInfo = {0, 0};
 
-            // 插入新的变量到 map 中
+            // add to variables
             program.variables[this->LHS] = varInfo;
         }
 
-        // 分割出右边的字符串并去除首尾空格
+        // extract the right hand side
         std::string right = trimBothEnds(save.substr(pos + 1));
         if (right.length()<= 0) throw ParseException(ParseErrorType::MissingOperandError, "Missing operand on the right side of =", lineNumber);
 
@@ -188,14 +189,14 @@ void LETstatement::exec(Program &program){
     auto it = program.variables.find(LHS);
     if (it != program.variables.end()){
         it->second.value = this->RHS.getValue();
-        std::cout << "LET: " << this->RHS.getValue() << std::endl;
+        //std::cout << "LET: " << this->RHS.getValue() << std::endl;
 //        it->second.usageCount++;
         this->runTime ++;
     }
     else {
         VariableInfo varInfo = {this->RHS.getValue(), 0};
 
-        // 插入新的变量到 map 中
+        // add to variables
         program.variables[this->LHS] = varInfo;
     }
 }
@@ -323,10 +324,10 @@ void IFstatement::parse(Program &program){
         throw ParseException(ParseErrorType::InvalidExpressionError, "invalid expression", lineNumber);
     }
 
-    // 根据等号分割字符串
+    // split by THEN
     size_t pos = save.find(" THEN");
     if (pos != std::string::npos) {
-        // 分割出左边的字符串并去除首尾空格
+        //extract LHS
         std::string expression= trimBothEnds(save.substr(0, pos));
         if (expression.length()<= 0) throw ParseException(ParseErrorType::MissingOperandError, "Missing expression after IF", lineNumber);
 
@@ -340,20 +341,6 @@ void IFstatement::parse(Program &program){
             throw ParseException(ParseErrorType::SyntaxError, "Multiple operators found in the string.", lineNumber);
         }
 
-//        switch (expression[operatorPos]) {
-//            case '=':
-//                this->ifOperator = '=';
-//                break;
-//            case '>':
-//                this->ifOperator = Greater;
-//                break;
-//            case '<':
-//                this->ifOperator = Less;
-//                break;
-//            default:
-//                // This should not happen since we checked for the operator before
-//                throw std::logic_error("Invalid operator found.");
-//        }
         this->ifOperator = (char) expression[operatorPos];
 
         this->LHS = Arithstatement(this->lineNumber, expression.substr(0, operatorPos));
@@ -361,11 +348,11 @@ void IFstatement::parse(Program &program){
         this->RHS = Arithstatement(this->lineNumber, expression.substr(operatorPos + 1));
         this->RHS.parse(program);
 
-        // 分割出右边的字符串并去除首尾空格
+        // extract RHS
         std::string target = trimBothEnds(save.substr(pos + 5));
         if (target.length()<= 0) throw ParseException(ParseErrorType::MissingOperandError, "Missing line number after THEN", lineNumber);
         this->toLine = std::stoi(target);
-        // 判断line是否存在
+        // if line number is invalid
         if (program.statements.find(toLine) == program.statements.end()){
             throw ParseException(ParseErrorType::UndefinedLineError, "undefined line number", lineNumber);
         }
@@ -409,14 +396,14 @@ void IFstatement::exec(Program &program){
 }
 
 std::string IFstatement::syntaxTree() const{
-    std::string syntaxTree = "IF THEN\n";
+    std::string syntaxTree = std::to_string(lineNumber) + " " + "IF THEN\n";
     std::string levelOrder = this->LHS.mergeTrees(this->RHS);
     syntaxTree += printLevelOrder(levelOrder);
     return syntaxTree;
 }
 
 std::string IFstatement::syntaxTreeWithRunStatistics() const{
-    std::string syntaxTree = "IF THEN " + std::to_string(this->trueTime) + " " + std::to_string(this->falseTime) + "\n";
+    std::string syntaxTree = std::to_string(lineNumber) + " " + "IF THEN " + std::to_string(this->trueTime) + " " + std::to_string(this->falseTime) + "\n";
     std::string levelOrder = this->LHS.mergeTrees(this->RHS);
     syntaxTree += printLevelOrder(levelOrder);
     return syntaxTree;
@@ -453,7 +440,6 @@ void PRINTstatement::exec(Program &program){
 }
 
 std::string PRINTstatement::syntaxTree() const{
-//     Todo:应该需要输出
     return std::to_string(lineNumber) + " " + "PRINT\n" + this->print.syntaxTreeWithOffset(1);
 //    return nullptr;
 }
@@ -486,19 +472,25 @@ void INPUTstatement::parse(Program &program){
 
     auto it = program.variables.find(this->input);
     if (it == program.variables.end()) {
-        // 如果没找到，插入
+        // variable not find
         VariableInfo varInfo{0 ,0};
         program.variables[this->input] = varInfo;
     }
 }
 
 void INPUTstatement::exec(Program &program){
-    int value = std::stoi(trimBothEnds(program.input));
-    // Todo :invalid输入 非int 抛typeerror
+    int value;
+    try {
+        value = std::stoi(trimBothEnds(program.input));
+        std::cout << "INPUT value: " << value << std::endl;
+    }
+    catch (const std::invalid_argument& ia){
+        throw ParseException(ParseErrorType::TypeError, "not a integer", lineNumber);
+    }
     auto it = program.variables.find(this->input);
     if (it != program.variables.end()){
         it->second.value = value;
-        it->second.usageCount++;  // Todo：要加吗？
+//        it->second.usageCount++;
         this->runTime ++;
     }
     else {
@@ -531,7 +523,8 @@ void GOTOstatement::setRunStatistics(int n){
 void GOTOstatement::parse(Program &program){
     if (statement.size() >= 5 && statement.substr(0, 5) == "GOTO ") {
         this->toLine = std::stoi(trimLeadingWhitespace(statement.substr(5)));
-        // 判断line是否存在
+        std::cout << "GOTO toline: " << toLine << std::endl;
+        // if line number is invalid
         if (program.statements.find(toLine) == program.statements.end()){
             throw ParseException(ParseErrorType::UndefinedLineError, "GOTO line number does't exist", lineNumber);
         }
