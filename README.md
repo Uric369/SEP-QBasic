@@ -18,9 +18,11 @@ In **BASIC**, a program consists of a sequence of numbered statements, as illust
 - **Program Interpretation**: Correctly interprets BASIC programs, including expression parsing, evaluation, and statement execution. Displays runtime statistics in the syntax tree and maintains runtime context.
 - **Error Handling**: Robustly handles errors in the input.
 - **Object-Oriented Design**: Project is implemented with object-oriented design, featuring clear and readable code with appropriate comments.
+![image](https://github.com/Uric369/SEP-QBasic/assets/96730554/aa5c9827-3a0d-495c-9dce-e3a6a2db8ac8)
 
 ## 1. Statements implemented in the minimal version of BASIC
-![Alt text](image.png)
+![image](https://github.com/Uric369/SEP-QBasic/assets/96730554/dfc80364-fa37-4408-a823-d39d228e67c9)
+
 - **REM**
     - This statement is used for comments. Any text on the line after the keyword REM is ignored. 
 - **LET**
