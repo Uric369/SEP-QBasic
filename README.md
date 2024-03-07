@@ -132,7 +132,7 @@ Utilize try/catch to handle syntax errors gracefully without crashing the interp
 ## Installation
 1. Clone the project to your local machine
    ```
-   git clone https://github.com/your/repository.git
+   git clone https://github.com/Uric369/SEP-QBasic.git
    ```
 2. Open QT 4.11.1
 3. Import the project files
